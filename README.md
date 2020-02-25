@@ -1,6 +1,6 @@
 
 # react-native-thumbnail
-Get thumbnail from local media. Currently, it only supports for video.
+Get thumbnail from local media. Currently, it only supports for video. Modified location of thumbnail save
 
 ## Getting started
 
