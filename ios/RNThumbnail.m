@@ -3,6 +3,7 @@
 #import <AVFoundation/AVFoundation.h>
 #import <AVFoundation/AVAsset.h>
 #import <UIKit/UIKit.h>
+#import <Photos/Photos.h>
 
 @implementation RNThumbnail
 
