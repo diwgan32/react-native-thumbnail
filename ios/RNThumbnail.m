@@ -45,7 +45,32 @@ RCT_EXPORT_METHOD(getSecondAndType:(NSString *)filepath
     @try {
         filepath = [filepath stringByReplacingOccurrencesOfString:@"file://"
                                                   withString:@""];
-        NSURL *vidURL = [NSURL fileURLWithPath:filepath];
+        __block NSURL *vidURL;
+      
+        if ([filepath hasPrefix:@"ph://"]) {
+            PHFetchResult *phAssetFetchResult = [PHAsset fetchAssetsWithLocalIdentifiers:@[[filepath substringFromIndex: 5]] options:nil];
+            if (phAssetFetchResult.count == 0) {
+                @throw([NSException exceptionWithName:@"Error" reason:@"Failed to fetch PHAsset" userInfo:nil]);
+            }
+
+            PHAsset *phAsset = [phAssetFetchResult firstObject];
+            PHVideoRequestOptions *options = [[PHVideoRequestOptions alloc] init];
+            options.networkAccessAllowed = YES;
+            options.version = PHVideoRequestOptionsVersionOriginal;
+            options.deliveryMode = PHVideoRequestOptionsDeliveryModeAutomatic;
+
+            dispatch_group_t group = dispatch_group_create();
+            dispatch_group_enter(group);
+            [[PHImageManager defaultManager] requestAVAssetForVideo:phAsset options:options resultHandler:^(AVAsset *asset, AVAudioMix *audioMix, NSDictionary *info) {
+                if ([asset isKindOfClass:[AVURLAsset class]]) {
+                    vidURL = [(AVURLAsset *)asset URL];
+                    dispatch_group_leave(group);
+                }
+            }];
+            dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
+        } else {
+            vidURL = [NSURL fileURLWithPath:filepath];
+        }
         
         AVURLAsset *asset = [[AVURLAsset alloc] initWithURL:vidURL options:nil];
         AVAssetImageGenerator *generator = [[AVAssetImageGenerator alloc] initWithAsset:asset];
