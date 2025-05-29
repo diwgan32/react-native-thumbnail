@@ -8,8 +8,11 @@ import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableMap;
+
+import android.content.ContentResolver;
 import android.media.ThumbnailUtils;
 import android.net.Uri;
+import android.os.ParcelFileDescriptor;
 import android.provider.MediaStore;
 import android.provider.MediaStore.Video.Thumbnails;
 import android.graphics.Bitmap;
@@ -58,7 +61,27 @@ public class RNThumbnailModule extends ReactContextBaseJavaModule {
     filePath = filePath.replace("file://","");
     long timeUs = (long) seconds * 1000000;
     MediaMetadataRetriever retriever = new MediaMetadataRetriever();
-    retriever.setDataSource(filePath);
+    if (filePath.startsWith("content://")) {
+      try {
+        Uri contentUri = Uri.parse(filePath);
+        ContentResolver resolver = this.getReactApplicationContext().getContentResolver();
+        ParcelFileDescriptor pfd = resolver.openFileDescriptor(contentUri, "r");
+        if (pfd != null) {
+          retriever.setDataSource(pfd.getFileDescriptor());
+        } else {
+          throw new Exception();
+        }
+      } catch (Exception e) {
+        WritableMap map = Arguments.createMap();
+        map.putDouble("width", 0);
+        map.putDouble("height", 0);
+        map.putString("path", "");
+        promise.resolve(map);
+        return;
+      }
+    } else {
+      retriever.setDataSource(filePath);
+    }
     Bitmap image = retriever.getFrameAtTime(timeUs, MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
 
     String fullPath = this.getReactApplicationContext().getFilesDir().getAbsolutePath() + "/thumb";
